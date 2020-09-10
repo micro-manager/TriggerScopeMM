@@ -398,7 +398,7 @@ void loop()
         Serial.print(sep);
         Serial.println(value);
         dacState[dacNum - 1] = value;
-        setDac(dacNum - 1, value); // sets the DAC to the desired value
+        setDacCheckBlanking(dacNum - 1);
       } else 
       {
         Serial.println(saoErrorString);
