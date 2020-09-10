@@ -1,8 +1,8 @@
 /******************************************/
-/*Trigger Scope v. 200 for Arduino microscope control by 
+/*Trigger Scope v. 604MM for Arduino microscope control by 
  ADVANCED RESEARCH CONSULTING @ 2015
- for info contact Austin Blanco
- austin@austinblanco.com c. 510-708-2995
+ Regents of the University of California, 2020
+
 
 
  Command set:
