@@ -12,7 +12,7 @@
  Error messages start with "!ERROR_" followed by the command causing the error, semi-colon 
  and error message (example: "!ERROR_RANGE: Command out of range, DAC=1-16, Range = 1-5...")
 
- "*"  - prints ID (example: "ARC TRIGGERSCOPE 16 R3C v.604-NS"
+ "*"  - prints ID (example: "ARC TRIGGERSCOPE 16 R3C v.604-MM"
  "?"  - pirnts message listing available commands and their parameters
  ----------------------analog output functions-------------------------
  "SAO"  - sets the voltage of specified DAC. Expected format: "DAC1-4236"  
@@ -25,7 +25,7 @@
           Returns: "!PANn,q" where q is the maximum number of states that can be programmed
  "PAO" - Sends sequence of analog output states to be used in triggered sequences.
           Format: "PAOn-s-o1-o2-on", where  
-          - n=1-16 for DACS1-16         
+          - n=1-16 for DAC 1-16         
           - s: position in the sequence to start inserting values. First position is 0.
           - o1, o2, etc... values (0-65535) to be consecutively  inserted in the list.
           Returns: "!PA0n-s-q" where q is the number of values successfully  inserted in the internal buffer.
@@ -33,18 +33,31 @@
           Format: "PACn", where n is the DAC pinNr (1-16)
  "PAS"  - Starts triggered transitions in analog output state as pre-loaded in PAO
           Format: "PASn-s-t" where
-          - n=1-16 for DACS1-16
+          - n=1-16 for DAC 1-16
           = s=0 or 1 where 0 stops and 1 starts triggered transitions 
           - t=0 or 1 and determines whether transition will happen on the falling (0) or rising (1) edge 
             of a pulse on the input pin 
-"BAO"  - Activates blanking mode of the ananlog output.  Output state will be coupled to the 
+"BAO"  - Activates blanking mode of the analog output.  Output state will be coupled to the 
          state of the input trigger.  If input trigger is active, the DAC will be active (
          as set with SDA), if input trigger is inactive, the output will go (which may not be 0V, depending on the range).
          Format: "BAOn-s-t" 
-          - n=1-16 for DACS1-16
+          - n=1-16 for DAC 1-16
           - s=0 or 1 where 0 stops and 1 starts balnking mode 
           - t translates state of the input pin to its activity for blanking.  If t = 0, 
-              DAC  will be 0 when input trigger pin is low. t = 1: DAC will be active when input trigger is low. 
+              DAC  will be 0 when input trigger pin is low. t = 1: DAC will be active when input trigger is low.
+"BAD"  - Sets a delay in blanking mode of analog output.  When the trigger is received to activate the analog output,
+         wait for the set amount of time (in micro-seconds) to actually activate the analog output. This command will only 
+         have an effect in combination iwth blanking mode (BAO).
+         Format: "BADn-t"
+          - n=1-16 for DAC 1-16 
+          - t=delay between trigger and actually activating the output in micro-seconds (default is 0 for no delay, 
+          no negative numbers allowed, maximum delay is 4,294,967,295)
+"BAL"  - Sets the lenght of analog output "pulse" in blanking mode" in micro-seconds. After start of the pulse (determined
+         by BAO and BAD, output will go to 0V after the given number of microseonds, or when the input trigger so dictates
+         (whichever comes first). 
+         Format: "BALn-t"
+         - n=1-16 for DAC 1-16
+         - t=maximum duration of the output pulse in microseconds (0 for no limit, maximum value is 4,294,967,295)
  "SAR" - Sets the output range in volts of the DAC.  Example: "SAR2-1" where 2
            specified the DAC number, and 1 the range.  Allowed ranges are number 1-5:
            1:  0-5V
@@ -114,7 +127,7 @@ Contact Advanced Research Consulting for Driver libraries! www.advancedresearch.
 #define NR_DO_STATES 1200
 
 
-String idname = "ARC TRIGGERSCOPE 16 R3C v.604-MM";
+String idname = "ARC TRIGGERSCOPE 16 R3C v.605-MM";
 
 const char* helpString = "Available commands: \r\n"
   "SAOn-s - sets DACs. n = DAC number (1-16), s = value (0-65535)\r\n"
@@ -124,8 +137,14 @@ const char* helpString = "Available commands: \r\n"
   "                  o = comma separated series of output values (0-65535)\r\n"
   "PACn - clears the sequence of analog states, n = DAC pin number (1-16)\r\n"
   "PASn-s-t - starts triggered transition in programmable analog output states as programmed in PAO\r\n"
-  "           n=DAC pin number (1-16), s = 0 (stops) or 1 (starts), \r\n"
-  "           t = transition on falling (0) or rising (1) edge of input trigger.\r\n"          
+  "           n = DAC pin number (1-16), s = 0 (stops) or 1 (starts), \r\n"
+  "           t = transition on falling (0) or rising (1) edge of input trigger.\r\n" 
+  "BAOn-s-t starts blanking mode of ananlog output.  n = DAC pin number (1-16), \r\n"
+  "           s = 0 (stops) or 1 (starts), t = output low when trigger low (0), or inverse (1)\r\n"
+  "BADn-t   sets delay between blanking transition and setting analog output.\r\n"
+  "         n = DAC pin number (1-16), t = delay in micro-seconds\r\n" 
+  "BALn-t   sets maximum duration of the analog output in blanking mode.\r\n"
+  "         n = DAC pin number (1-16), t = maximumi duration in microseconds.\r\n"  
   "SARn-s - sets DAC voltages range. n = DAC number (1-16), s= 1:0-5V 2:0-10V 3:-5-+5V 4: -10-+10V 5:-2-+2V\r\n"
   "SDOn-s - sets digital output state, n = 0(pins1-8) or 1(pins9-16), s binary mask 0-255\r\n" 
   "PDNn - queries the number of programmable digital output states, n = pin group 0(1-8) or 1 (9-16)\r\n"
@@ -166,6 +185,16 @@ int ttlArrayMaxIndex[2] = {0, 0}; // maintains the max index in the array that w
 int ttlArrayIndex[2] = {0, 0}; // keeps track of current position in the array
 int dacArrayMaxIndex[NR_DACS] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 int dacArrayIndex[NR_DACS] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+uint32_t dacblankDelay[NR_DACS] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+uint32_t dacblankDuration[NR_DACS] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+
+// data structures to be assembled from blanking settings above that have a time-ordered sequence of events
+int dacBlankEventsNr = 0;
+// there can be a delay and a duration for each blanking event
+uint32_t dacBlankEventNextWait[2 * NR_DACS] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+uint8_t dacBlankEventPinNr[2 * NR_DACS] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+// 0 : off, 1: set normal state, 2: set value from dacArray
+uint8_t dacBlankEventState[2 * NR_DACS] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 
 byte pinGroupState[2] = {0, 0};
 byte pinGroupStoredState[2] = {0, 0};
@@ -212,6 +241,8 @@ const char* paoErrorString = "!ERROR_PAO: Format: PAOn-s-01-02-0n n=1-16 (DAC1-1
 const char* pacErrorString = "!ERROR_PAC: Format: PACn n=1-16 (DAC1-16)";
 const char* pasErrorString = "!ERROR_PAS: Format: PASn-s-t n=1-16 (DAC1-16) s 0=stop 1=start, t=transition on falling(0) or rising(1) edge";   
 const char* baoErrorString = "!ERROR_BAO: Format: BAOn-s-t n=1-16 (DAC1-16), s blank 0(off) or 1(on), t 0 (blank on low) or 1 (blank on high)";
+const char* badErrorString = "!ERROR_BAD: Format: BADn-t n=1-16 (DAC1-16), t = 0 - 2147483647";
+const char* balErrorString = "!ERROR_BAD: Format: BALn-t n=1-16 (DAC1-16), t = 0 - 2147483647";
 const char* sdoErrorString = "!ERROR_SDO: Format: SDOn-s n=pingroup 0-1, s=value 0-255";
 const char* pdnErrorString = "!ERROR_PDN: Format: PDNn n=pingroup 0-1";
 const char* pdoErrorString = "!ERROR_PDO: Format: PDOn-s-01-02-0n n=pingroup 0-1, s=position, 0n=values 0-255";
@@ -584,7 +615,7 @@ void loop()
     }
 
     /*
-    "BAO"  - Activates blanking mode of the ananlog output.  Output state will be coupled to the 
+    "BAO"  - Activates blanking mode of the analog output.  Output state will be coupled to the 
          state of the input trigger.  If input trigger is active, the DAC will be active (
          as set with SDA), if input trigger is inactive, the output will go (which may not be 0V, depending on the range).
          Format: "BAOn,s,t" 
@@ -618,6 +649,69 @@ void loop()
       } else 
       {
         Serial.println(baoErrorString);
+      }
+    }
+
+    /* 
+     "BAD"  - Sets a delay in blanking mode of analog output.  When the trigger is received to activate the analog output,
+         wait for the set amount of time (in micro-seconds) to actually activate the analog output. This command will only 
+         have an effect in combination iwth blanking mode (BAO).
+         Format: "BADn-t"
+          - n=1-16 for DAC 1-16 
+          - t=delay between trigger and actually activating the output in micro-seconds (default is 0 for no delay, 
+          no negative numbers allowed, maximum delay is 2,147,483,647)
+    */
+    else if (command == "BAD")
+    {
+      error = false;
+      int dacNr = 0;
+      int scp = 5;
+      if (inputString[4] == sep) { dacNr = inputString.substring(3,4).toInt(); }
+      else if (inputString[5] == sep) { dacNr = inputString.substring(3,5).toInt(); scp = 6; }
+      else { error = true; }
+      if (dacNr < 1 || dacNr > 16){ error = true; }
+      uint32_t duration = inputString.substring(scp).toInt();
+      if (!error)
+      {
+        dacblankDelay[dacNr - 1] = duration;
+        Serial.print("!BAD");
+        Serial.print(dacNr);
+        Serial.print(sep);
+        Serial.println(duration);
+      } else 
+      {
+        Serial.println(badErrorString);
+      }
+    }
+    
+    /*
+      * "BAL"  - Sets the lenght of analog output "pulse" in blanking mode" in micro-seconds. After start of the pulse (determined
+         by BAO and BAD, output will go to 0V after the given number of microseonds, or when the input trigger so dictates
+         (whichever comes first). 
+         Format: "BALn-t"
+         - n=1-16 for DAC 1-16
+         - t=maximum duration of the output pulse in microseconds (0 for no limit, maximum value is 2,147,483,647)
+     */
+    else if (command == "BAL")
+    {
+      error = false;
+      int dacNr = 0;
+      int scp = 5;
+      if (inputString[4] == sep) { dacNr = inputString.substring(3,4).toInt(); }
+      else if (inputString[5] == sep) { dacNr = inputString.substring(3,5).toInt(); scp = 6; }
+      else { error = true; }
+      if (dacNr < 1 || dacNr > 16){ error = true; }
+      uint32_t duration = inputString.substring(scp).toInt();
+      if (!error)
+      {
+        dacblankDuration[dacNr - 1] = duration;
+        Serial.print("!BAL");
+        Serial.print(dacNr);
+        Serial.print(sep);
+        Serial.println(duration);
+      } else 
+      {
+        Serial.println(balErrorString);
       }
     }
 
@@ -1365,6 +1459,47 @@ void diagTest()
   while(Serial.available() == 0) { delay(10); } //wait for any input from the keyboard
 
   Serial.println("------------TEST PROCEDURE COMPLETE-------------");
+}
+
+/**
+ * This function converts the user's input with requests for analog blanking, sequenceing, pulse delay and pulse
+ * duration into a list with timed events that can be executed sequentially with the indicated delays in between
+ * Output of this protocol is stored in the "dacBlankEvent" variables
+ */
+void generateDacBlankEvents()
+{
+  /*
+int    dacArray[NR_DAC_STATES][NR_DACS] = {{0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}}; // DACprogram list
+uint8_t ttlArray[NR_DO_STATES][2] = {{0,0}}; // digital output states program list
+int ttlArrayMaxIndex[2] = {0, 0}; // maintains the max index in the array that was set
+int ttlArrayIndex[2] = {0, 0}; // keeps track of current position in the array
+int dacArrayMaxIndex[NR_DACS] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+int dacArrayIndex[NR_DACS] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+uint32_t dacblankDelay[NR_DACS] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+uint32_t dacblankDuration[NR_DACS] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+
+bool dacBlanking[16] = {false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false};
+bool dacBlankOnLow[16] = {false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false};
+bool dacSequencing[16] = {false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false};
+byte dacSequenceMode[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+
+// data structures to be assembled from blanking settings above that have a time-ordered sequence of events
+int dacBlankEventsNr = 0;
+// there can be a delay and a duration for each blanking event
+uint32_t dacBlankEventNextWait[2 * NR_DACS] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+uint8_t dacBlankEventPinNr[2 * NR_DACS] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+// 0 : off, 1: set normal state, 2: set value from dacArray
+uint8_t dacBlankEventState[2 * NR_DACS] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+  */
+  int nrDacsInUse = 0;
+  int dacsUsed [NR_DACS] =   {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+  for (int i = 0; i < NR_DACS; i++) {
+    if (dacBlanking[i]) { 
+      dacsUsed[nrDacsInUse] = i;
+      nrDacsInUse++;
+    }
+  }
+  
 }
 
 
