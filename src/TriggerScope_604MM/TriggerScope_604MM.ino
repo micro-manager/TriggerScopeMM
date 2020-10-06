@@ -109,6 +109,8 @@ Contact Advanced Research Consulting for Driver libraries! www.advancedresearch.
  
 #include <SPI.h>
 #include "Linduino.h"
+#include "DacEvents.h"
+#include "OutputEvent.h"
 
 #define focus 15     //sets focus line #
 #define pwrLed A0    //POWER indication
@@ -185,8 +187,8 @@ int ttlArrayMaxIndex[2] = {0, 0}; // maintains the max index in the array that w
 int ttlArrayIndex[2] = {0, 0}; // keeps track of current position in the array
 int dacArrayMaxIndex[NR_DACS] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 int dacArrayIndex[NR_DACS] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-uint32_t dacblankDelay[NR_DACS] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-uint32_t dacblankDuration[NR_DACS] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+uint32_t dacBlankDelay[NR_DACS] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+uint32_t dacBlankDuration[NR_DACS] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 
 // data structures to be assembled from blanking settings above that have a time-ordered sequence of events
 int dacBlankEventsNr = 0;
@@ -673,7 +675,7 @@ void loop()
       uint32_t duration = inputString.substring(scp).toInt();
       if (!error)
       {
-        dacblankDelay[dacNr - 1] = duration;
+        dacBlankDelay[dacNr - 1] = duration;
         Serial.print("!BAD");
         Serial.print(dacNr);
         Serial.print(sep);
@@ -704,7 +706,7 @@ void loop()
       uint32_t duration = inputString.substring(scp).toInt();
       if (!error)
       {
-        dacblankDuration[dacNr - 1] = duration;
+        dacBlankDuration[dacNr - 1] = duration;
         Serial.print("!BAL");
         Serial.print(dacNr);
         Serial.print(sep);
@@ -1491,12 +1493,23 @@ uint8_t dacBlankEventPinNr[2 * NR_DACS] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 // 0 : off, 1: set normal state, 2: set value from dacArray
 uint8_t dacBlankEventState[2 * NR_DACS] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
   */
+
+  // note: this should probably be duplicated for both trigger directions, ignore now for simplicity
+  
   int nrDacsInUse = 0;
   int dacsUsed [NR_DACS] =   {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
   for (int i = 0; i < NR_DACS; i++) {
     if (dacBlanking[i]) { 
       dacsUsed[nrDacsInUse] = i;
       nrDacsInUse++;
+    }
+  }
+  for (int dac = 0; dac < nrDacsInUse; dac++) {
+    if (dacBlankDelay[dac] == 0) {
+      dacBlankEventNextWait[dacBlankEventsNr] = 0;
+      dacBlankEventPinNr[dacBlankEventsNr] = dac;
+      dacBlankEventState[dacBlankEventsNr] = dacSequencing[dac] ? 2 : 1;
+      dacBlankEventsNr++;
     }
   }
   
