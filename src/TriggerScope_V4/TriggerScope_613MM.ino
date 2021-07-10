@@ -163,8 +163,6 @@ const char* helpString = "Available commands: \r\n"
   "\r\n"; // empty line to signal end of help textd
 
 
- // TODO: write PAS, and BAO     
-
 const char sep = '-';
 
 //new IC assignments and SD card access for V4 board
@@ -355,7 +353,7 @@ void loop()
     {
       if (dacSequencing[i])
       {
-        if (dacSequenceMode[i] = triggerPinState)
+        if (dacSequenceMode[i] == triggerPinState)
         {
           dacState[i] = dacArray[dacArrayIndex[i]][i];
           dacArrayIndex[i]++;
