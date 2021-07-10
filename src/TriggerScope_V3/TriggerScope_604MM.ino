@@ -160,9 +160,7 @@ const char* helpString = "Available commands: \r\n"
   "BDn-s-t - sync digital output with input trigger. n = pin group 0(1-8) or 1 (9-16)\r\n"
   "          s = 0 stops 1 starts, t = output low when trigger low (0), or inverse (1)\r\n"
   "\r\n"; // empty line to signal end of help textd
-
-
- // TODO: write PAS, and BAO     
+   
 
 const char sep = '-';
 
@@ -223,16 +221,6 @@ int runCycles = 0; //holds running position vs total cycles for timelapse
 volatile boolean inTrigger=false;
 byte program=0; //this sets the active program # used in the Mode 3 high speed sequencer
 byte maxProgram=0; //this holds the maximum program value entered, and is used to set the maxium sequence step.
-// byte stepMode = 1; //1 = waits for TTL IN, 2=runs continually
-// unsigned long timeOut = 1000; //timeout for sequence (set to 10 seconds by default)
-// unsigned long tStart = 0; //sequence start timer
-// unsigned long trigLedTimer = 0;
-// boolean reportTime = 0;
-// boolean umArmIgnore = 0; //this handles micromanagers multiple ARM commands which are issued back-to-back on MDA acqtivation. Ignores after a short wait. 
-// boolean usepwm = false;
-// byte pChannel =0; //number of channels micromanager has attempted to control
-// byte lastPT=20;
-// byte trigMode = 2; //0 = LOW 1 = HIGH 2 = RISING 3 = FALLING 4 = CHANGE
 
 bool error = false;
 
@@ -331,14 +319,14 @@ void loop()
 
   if (triggerPinState != digitalReadDirect(trig[0]))
   {
-    triggerPinState = ! triggerPinState;
+    triggerPinState = !triggerPinState;
     digitalWriteDirect(trigLed, triggerPinState);
 
     for (byte i = 0; i < NR_DACS; i++) // todo: optimize by ordering an array with sequenceable DACS and only cycle through those
     {
       if (dacSequencing[i])
       {
-        if (dacSequenceMode[i] = triggerPinState)
+        if (dacSequenceMode[i] == triggerPinState)
         {
           dacState[i] = dacArray[dacArrayIndex[i]][i];
           dacArrayIndex[i]++;
@@ -362,7 +350,9 @@ void loop()
         {
           pinGroupState[i] = ttlArray[ttlArrayIndex[i]][i];
           ttlArrayIndex[i]++;
-          if (ttlArrayIndex[i] == ttlArrayMaxIndex[i]) { ttlArrayIndex[i] = 0; }
+          if (ttlArrayIndex[i] == ttlArrayMaxIndex[i]) { 
+            ttlArrayIndex[i] = 0; 
+          }
           if (!pinGroupBlanking[i])
           {
             setPinGroup(i, pinGroupState[i]);
