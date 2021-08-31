@@ -1,5 +1,5 @@
-/******************************************/
-/*Trigger Scope v. 604MM for Arduino microscope control by 
+/******************************************
+ Trigger Scope v. 604MM for Arduino microscope control by 
  ADVANCED RESEARCH CONSULTING @ 2015
  Regents of the University of California, 2020
 
@@ -110,8 +110,6 @@ Contact Advanced Research Consulting for Driver libraries! www.advancedresearch.
 #include <SPI.h>
 #include <Wire.h>
 #include "Linduino.h"
-#include "DacEvents.h"
-#include "OutputEvent.h"
 #include "Adafruit_MCP23017.h"
 
 #define focus 15     //sets focus line #
@@ -487,12 +485,12 @@ void loop()
       int n = 0;
       int s = 0;
       int dacNr = 0;
-      int scp = 5;
+      unsigned int scp = 5;
       if (inputString[4] == sep) { dacNr = inputString.substring(3,4).toInt(); }
       else if (inputString[5] == sep){ dacNr = inputString.substring(3,5).toInt(); scp = 6; }
       else { error = true; }
       if (dacNr < 1 || dacNr > 16) { error = true; }
-      int ecp = scp + 1;
+      unsigned int ecp = scp + 1;
       if (!error)
       {
         while (inputString[ecp - 1] != sep && ecp < inputString.length())
@@ -586,8 +584,6 @@ void loop()
       if (inputString.length() == 9 || inputString.length() == 10)
       {
         error = false;
-        int s = 0;
-        int n = 0;
         int dacNr = 0;
         int scp = 4;
         if (inputString[scp] == sep) { dacNr = inputString.substring(3,scp).toInt(); }
@@ -801,8 +797,8 @@ void loop()
       {
         error = true;
       }
-      int scp = 5;
-      int ecp = 6;
+      unsigned int scp = 5;
+      unsigned int ecp = 6;
       if (!error)
       {
         while (inputString[ecp - 1] != sep && ecp < inputString.length())
@@ -1474,13 +1470,6 @@ void diagTest()
   else{Serial.println("No input detected, TRIG 4 FAILED - please retry this test...");}
   delay(100); 
   digitalWriteDirect(ttl[0],0);
-
-  //TEST 5
-  #define pwrLed A0    //POWER indication
-  #define dacLed A1    //POWER indication
-  #define ttlLed A2    //POWER indication
-  #define trigLed A3   //POWER indication
-  #define readyLed A4  //POWER indication
 
   digitalWrite(pwrLed,1);
   digitalWrite(dacLed,1);
