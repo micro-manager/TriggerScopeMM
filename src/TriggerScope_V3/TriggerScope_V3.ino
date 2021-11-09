@@ -98,7 +98,13 @@
          where n is the pingroup (0 or 1) and s switched blanking mode on (1) or off (0). 
          t translates state of the input pin to its activity for blanking.  If t = 0, 
          output pins will be low when input trigger pin is low.  When t = 1, output pins 
-         will be active when input trigger is low.       
+         will be active when input trigger is low.   
+ "SSL" - Set Signal LEDs.
+         In some cases, setting signal LEDs slows down triggered operation, so offer the option to 
+         not set them.
+         Format: "SSLn" where
+         - n - 0 ("Off") or 1 ("On")
+         Signal LEDs are On by default      
 
  
 
@@ -159,6 +165,7 @@ const char* helpString = "Available commands: \r\n"
   "           t = transition on falling (0) or rising (1) edge of input trigger.\r\n"
   "BDn-s-t - sync digital output with input trigger. n = pin group 0(1-8) or 1 (9-16)\r\n"
   "          s = 0 stops 1 starts, t = output low when trigger low (0), or inverse (1)\r\n"
+  "SSLn - switches use of signal LEDs.  n=0 (Off) or n=1 (On)\r\n"
   "\r\n"; // empty line to signal end of help textd
    
 
@@ -187,6 +194,7 @@ int dacArrayMaxIndex[NR_DACS] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 int dacArrayIndex[NR_DACS] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 uint32_t dacBlankDelay[NR_DACS] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 uint32_t dacBlankDuration[NR_DACS] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+boolean useSignalLEDs_ = true;
 
 // data structures to be assembled from blanking settings above that have a time-ordered sequence of events
 int dacBlankEventsNr = 0;
@@ -239,6 +247,7 @@ const char* pdoErrorString = "!ERROR_PDO: Format: PDOn-s-01-02-0n n=pingroup 0-1
 const char* bdoErrorString = "!ERROR_BDO: Format: BDOn-s-t n=pingroup 0-1, s blank 0(off) or 1(on), t 0 (blank on low) or 1 (blank on high)";
 const char* pdcErrorString = "!ERROR_PDC: Format: PDCn n=pinGroup(1/2)";   
 const char* pdsErrorString = "!ERROR_PDS: Format: PDSn-s-t n=pinGroup(1/2) s 0=stop 1=start, t=transition on falling(0) or rising(1) edge";   
+const char* sslErrorString = "!ERROR_SSL: Format: SSLn n=0 (Off) or 1 (On)";
 const char* generalErrorString = "ERROR_UNKNOWN_COMMAND";
 
 
@@ -320,8 +329,11 @@ void loop()
   if (triggerPinState != digitalReadDirect(trig[0]))
   {
     triggerPinState = !triggerPinState;
-    digitalWriteDirect(trigLed, triggerPinState);
-
+    if (useSignalLEDs_)
+    {
+      digitalWriteDirect(trigLed, triggerPinState);
+    }
+    
     for (byte i = 0; i < NR_DACS; i++) // todo: optimize by ordering an array with sequenceable DACS and only cycle through those
     {
       if (dacSequencing[i])
@@ -365,8 +377,6 @@ void loop()
                                                    setPinGroup(i, 0);
       }
     }
-
-   
   }
       
   if (stringComplete)  // There is a new line terminated string ready to be processed 
@@ -985,6 +995,34 @@ void loop()
         Serial.println(sarErrorString);
       }  
     }
+
+    // Set Signal LED flag
+    else if (command == "SSL") 
+    {
+      error = false;
+      byte result = inputString.substring(3).toInt();;
+      if (result == 0)
+      {
+        useSignalLEDs_ = false;
+        digitalWrite(dacLed, 0);
+        digitalWrite(ttlLed, 0);
+        digitalWriteDirect(trigLed,0);
+      }
+      else if (result == 1)
+      {
+        useSignalLEDs_ = true;
+        // TODO: make sure the LEDs are set correctly?
+      }
+      else error = true;
+      if (!error) 
+      {
+        Serial.print("!SSL");
+        Serial.println(result);
+      } else
+      {
+        Serial.println(sslErrorString);
+      }
+    }
       
     //status commands
     else if(inputString == "STAT?\n")                     {debug();         }
@@ -1001,117 +1039,8 @@ void loop()
     clearSerial();
     digitalWrite(readyLed,HIGH);
   } //EXIT LOOP FOR SERIAL HERE
+}
   
-
-/*********************This block runs the high speed control interface *********************/
-
-/****checks the acquisition order
- * mode 0 == channel first eg set ch1 stweep Z
- * mode 1 == Z first EG step Z then Ch1 Ch2 then Step Z ...
- */ 
-
-/*
- while(trigArmed)
- { // just sit here and wait for the next command until armed is off,  which can only happen @ end of sequence
-   unsigned long tStart = millis() + timeOut; //set timeout position 
-   unsigned long tLed = 0;
-  // focus commands = start, step, #loops,direction,slave,current step
-  //if(program == 0) {inTrigger=true; } //force a first step 
-  
-  if( inTrigger ) 
-  { //we recieved a trigger from our source
-    //  and is mode 0, and is at 0 position OR
-    // and is mode 1, and is at any position OR
-    // if focus isn't enabled
- */   
-    /*
-     * When should a channel update be issued? When
-     *  focus is ON, and mode is sweep per channel (0) AND F position is 0
-     *  focus is ON, and mode is slave to channel (1)
-     *  focus is off any time
-     */
-    
- //   boolean runUpdate = true;
-    /*
-    if( (focArray[1] != 0) && (focArray[4] == 0) ){ //if we are using the focus and focus will sweep through a single channel setting
-      if( focArray[5] == 0 ) { runUpdate = true;} //AND if the focus is at position 0 (start of sweep)
-    }
-    
-    if( (focArray[1] !=0) && (focArray[4] == 1)) { runUpdate = true; } // Case where channel is switching each Z plane
-    if(focArray[1] == 0) {runUpdate=true;}                           //Case where no focus block used so update the channel
-    */
-  /*  
-    //do DAC and TTL control stuff, not focus stuff though
-    if(runUpdate) {
-      byte walker=0;
-      for(walker = 0 ; walker < 15 ; ++walker ){  //sets DACs 1-16 
-        dac_write(10,0, DAC [walker], dacArray [program] [walker]); // Set DAC Lines
-        digitalWriteDirect( ttl [walker] , ttlArray[program] [walker] ); //set TTL lines
-      }
-      digitalWriteDirect( ttl [walker] , ttlArray[program] [walker] ); //set 16th TTL line - 
-    }
-    ++program;
-*/
-  /* THIS MOVES AROUND THE Z FOCUS 
-   * in this case, we assume a trigger was recieved, but we should only mess with focus stuff if it's on and if it's needed 
-   * here we only want to update the focus position in the case that EITHER
-   * Mode = 0 Channel 1 - Z 1, Z2, Z3
-   * mode = 1 Z 1 - CH1, CH2, Z2, Ch1, Ch2 
-   */
-/*
-    if( (focArray[1] != 0) && ( focArray[4]==0 )){ fastFocus(); }       // if any focus array is active, and MODE = SWEEP OVER CHANNEL
-    if( (focArray[1] != 0) && ( focArray[4]==1 )){                      // in this case sweep is active  and MODE = STEP AFTER CHANNEL  
-      if((program == maxProgram-1) && (focArray[5] <= focArray[2])) {fastFocus();}            
-    }
-    
-    delay(delArray[program]);  //wait for specified delay          
-    
-    if(  focArray[1] == 0) {++program;}              //if not using focus at all
-    if( (focArray[1] != 0) && (focArray[4] == 1) ) { //focus is used but in step mode
-      ++program; 
-      if( (program > maxProgram) && (focArray[5] != 0) ) { //because we are stepping the focus, program must be reset to 0 in this case we know the focus has not completed, so we can reset the main program array position
-        program=0;
-      }
-    }
-    */
-  } //END OF TRIGGER RESPONSE
-
-  /*
-   inTrigger=false; //turn off trigger
-   tStart = millis() + timeOut; //update timeout delta for next run
-   
-  //Done moving stuff, now wait for the next input
-  while(!inTrigger){ //wait for next pulse
-    if(millis() > tStart) {
-      trigArmed=false;
-      program = maxProgram+1; 
-      Serial.println("Timeout Exceeded");
-      allOff();
-      break;
-    } 
-    //we hit the timeout so end the sequence   
-    if(tLed < millis() ) 
-    { 
-      digitalWrite(readyLed,!digitalRead(readyLed));  
-      tLed = millis() + 30;
-    }
-  }
- 
-  if(program > maxProgram) { //end and cleanup
-    ++runCycles;
-    if(runCycles == timeCycles) { //we are done
-      trigArmed=false; 
-      program=0;
-      allOff();
-      Serial.println("!SAFE");
-      digitalWrite(readyLed,HIGH);
-    }
-   if(runCycles < timeCycles) {program = 0;}
-  }
- } //close trigarmed
-} //close main loop
-*/
-
 
 
 
@@ -1138,15 +1067,18 @@ void setDac(byte dNum,int dVal)
 {  
   dac_write(10,0, dNum, dVal); // Send dac_code
   //led indication
-  for (byte d=0; d < 16; d++) 
+  if (useSignalLEDs_)
   {
-    if (dacState[dNum] > 0) 
+    for (byte d=0; d < 16; d++) 
     {
-      digitalWrite(dacLed, 1);
-      return;
+      if (dacState[dNum] > 0) 
+      {
+        digitalWrite(dacLed, 1);
+        return;
+      }
     }
+    digitalWrite(dacLed, 0);
   }
-  digitalWrite(dacLed, 0);
 }
 
 // sets the output state of the given pin number
@@ -1162,7 +1094,10 @@ void setTTL(byte t1, boolean t2)
   {
     bitClear(ttlState, pin);
   }  
-  digitalWrite(ttlLed, ttlState > 0);
+  if (useSignalLEDs_)
+  {
+    digitalWrite(ttlLed, ttlState > 0);
+  }
 }
 
 void setDacCheckBlanking(byte dacNr)
@@ -1206,7 +1141,10 @@ inline void setPinGroup(byte pinGroup, byte value)
   {
     ttlState = (ttlState & 0x00ff) | (value << 8);
   }  
-  digitalWrite(ttlLed, ttlState > 0);
+  if (useSignalLEDs_)
+  {
+    digitalWrite(ttlLed, ttlState > 0);
+  }
 }
 
 /*
