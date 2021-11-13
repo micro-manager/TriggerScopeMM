@@ -608,22 +608,26 @@ void loop()
         }
         int state = inputString.substring(scp+1,scp+2).toInt();
         if (state < 0 || state > 1) { error = true; }
-        int transition = inputString.substring(scp+3).toInt();
-        if (transition < 0 || transition > 1) { error = true; }
+        int rising = inputString.substring(scp+3).toInt();
+        if (rising < 0 || rising > 1) { error = true; }
         if (!error)
         {
           dacSequencing[dacNr - 1] = (boolean) state;
-          dacSequenceMode[dacNr - 1] = transition;
+          dacSequenceMode[dacNr - 1] = rising;
           if (state)
           {
             dacStoredState[dacNr - 1] = dacState[dacNr - 1];
             dacArrayIndex[dacNr - 1] = 0; 
+            if (!rising) { // if we trigger on the falling edge, set initial state now, and advance counter here
+              setDac(dacNr -1, dacArray[dacArrayIndex[dacNr - 1]][dacNr - 1]); // Check blanking?
+              dacArrayIndex[dacNr - 1]++;
+            }
           } else
           {
             dacState[dacNr - 1] = dacStoredState[dacNr - 1];
           }
           char out[20];
-          sprintf(out, "!PAS%d%c%d%c%d", dacNr, sep, state, sep, transition);
+          sprintf(out, "!PAS%d%c%d%c%d", dacNr, sep, state, sep, rising);
           Serial.println(out);
         }
       } else 
@@ -910,22 +914,27 @@ void loop()
         if (pinGroup < 0 || pinGroup > 1) { error = true; }
         int state = inputString.substring(5,6).toInt();
         if (state < 0 || state > 1) { error = true; }
-        int transition = inputString.substring(7,8).toInt();
-        if (transition < 0 || transition > 1) { error = true; }
+        int rising = inputString.substring(7,8).toInt();
+        if (rising < 0 || rising > 1) { error = true; }
         if (!error)
         {
           pinGroupSequencing[pinGroup] = (boolean) state;
-          pinGroupSequenceMode[pinGroup] = transition;
+          pinGroupSequenceMode[pinGroup] = rising;
           if (state)
           {
             pinGroupStoredState[pinGroup] = pinGroupState[pinGroup];
             ttlArrayIndex[pinGroup] = 0; 
+            if (!rising) 
+            { // if we trigger on the falling edge, set initial state now, and advance counter here
+              setPinGroup(pinGroup, ttlArray[ttlArrayIndex[pinGroup]][pinGroup]); // Check blanking?
+              ttlArrayIndex[pinGroup]++;
+            }
           } else
           {
             pinGroupState[pinGroup] = pinGroupStoredState[pinGroup];
           }
           char out[20];
-          sprintf(out, "!PDS%d%c%d%c%d", pinGroup, sep, state, sep, transition);
+          sprintf(out, "!PDS%d%c%d%c%d", pinGroup, sep, state, sep, rising);
           Serial.println(out);
         }
       } else 
