@@ -99,11 +99,16 @@
          t translates state of the input pin to its activity for blanking.  If t = 0, 
          output pins will be low when input trigger pin is low.  When t = 1, output pins 
          will be active when input trigger is low.       
-
+ "SSL" - Set Signal LEDs.
+         In some cases, setting signal LEDs slows down triggered operation, so offer the option to 
+         not set them.
+         Format: "SSLn" where
+         - n - 0 ("Off") or 1 ("On")
+         Signal LEDs are On by default 
  
 
 
-/*****************************
+*****************************
 Contact Advanced Research Consulting for Driver libraries! www.advancedresearch.consulting
  ******************************/
 #include <SD.h> 
@@ -158,6 +163,7 @@ const char* helpString = "Available commands: \r\n"
   "           t = transition on falling (0) or rising (1) edge of input trigger.\r\n"
   "BDn-s-t - sync digital output with input trigger. n = pin group 0(1-8) or 1 (9-16)\r\n"
   "          s = 0 stops 1 starts, t = output low when trigger low (0), or inverse (1)\r\n"
+  "SSLn - switches use of signal LEDs.  n=0 (Off) or n=1 (On)\r\n"
   "\r\n"; // empty line to signal end of help textd
 
 
@@ -191,6 +197,7 @@ int dacArrayMaxIndex[NR_DACS] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 int dacArrayIndex[NR_DACS] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 uint32_t dacBlankDelay[NR_DACS] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 uint32_t dacBlankDuration[NR_DACS] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+boolean useSignalLEDs_ = true;
 
 // data structures to be assembled from blanking settings above that have a time-ordered sequence of events
 int dacBlankEventsNr = 0;
@@ -252,7 +259,8 @@ const char* pdnErrorString = "!ERROR_PDN: Format: PDNn n=pingroup 0-1";
 const char* pdoErrorString = "!ERROR_PDO: Format: PDOn-s-01-02-0n n=pingroup 0-1, s=position, 0n=values 0-255";
 const char* bdoErrorString = "!ERROR_BDO: Format: BDOn-s-t n=pingroup 0-1, s blank 0(off) or 1(on), t 0 (blank on low) or 1 (blank on high)";
 const char* pdcErrorString = "!ERROR_PDC: Format: PDCn n=pinGroup(1/2)";   
-const char* pdsErrorString = "!ERROR_PDS: Format: PDSn-s-t n=pinGroup(1/2) s 0=stop 1=start, t=transition on falling(0) or rising(1) edge";   
+const char* pdsErrorString = "!ERROR_PDS: Format: PDSn-s-t n=pinGroup(1/2) s 0=stop 1=start, t=transition on falling(0) or rising(1) edge";
+const char* sslErrorString = "!ERROR_SSL: Format: SSLn n=0 (Off) or 1 (On)";
 const char* generalErrorString = "ERROR_UNKNOWN_COMMAND";
 
 
@@ -345,8 +353,10 @@ void loop()
   if (triggerPinState != digitalReadFast(trig[0]))
   {
     triggerPinState = ! triggerPinState;
-    digitalWriteDirect(trigLed, triggerPinState);
-
+    if (useSignalLEDs_)
+    {
+      digitalWriteDirect(trigLed, triggerPinState);
+    }
     for (byte i = 0; i < NR_DACS; i++) // todo: optimize by ordering an array with sequenceable DACS and only cycle through those
     {
       if (dacSequencing[i])
@@ -598,22 +608,26 @@ void loop()
         }
         int state = inputString.substring(scp+1,scp+2).toInt();
         if (state < 0 || state > 1) { error = true; }
-        int transition = inputString.substring(scp+3).toInt();
-        if (transition < 0 || transition > 1) { error = true; }
+        int rising = inputString.substring(scp+3).toInt();
+        if (rising < 0 || rising > 1) { error = true; }
         if (!error)
         {
           dacSequencing[dacNr - 1] = (boolean) state;
-          dacSequenceMode[dacNr - 1] = transition;
+          dacSequenceMode[dacNr - 1] = rising;
           if (state)
           {
             dacStoredState[dacNr - 1] = dacState[dacNr - 1];
             dacArrayIndex[dacNr - 1] = 0; 
+            if (!rising) { // if we trigger on the falling edge, set initial state now, and advance counter here
+              setDac(dacNr -1, dacArray[dacArrayIndex[dacNr - 1]][dacNr - 1]); // Check blanking?
+              dacArrayIndex[dacNr - 1]++;
+            }
           } else
           {
             dacState[dacNr - 1] = dacStoredState[dacNr - 1];
           }
           char out[20];
-          sprintf(out, "!PAS%d%c%d%c%d", dacNr, sep, state, sep, transition);
+          sprintf(out, "!PAS%d%c%d%c%d", dacNr, sep, state, sep, rising);
           Serial.println(out);
         }
       } else 
@@ -900,22 +914,27 @@ void loop()
         if (pinGroup < 0 || pinGroup > 1) { error = true; }
         int state = inputString.substring(5,6).toInt();
         if (state < 0 || state > 1) { error = true; }
-        int transition = inputString.substring(7,8).toInt();
-        if (transition < 0 || transition > 1) { error = true; }
+        int rising = inputString.substring(7,8).toInt();
+        if (rising < 0 || rising > 1) { error = true; }
         if (!error)
         {
           pinGroupSequencing[pinGroup] = (boolean) state;
-          pinGroupSequenceMode[pinGroup] = transition;
+          pinGroupSequenceMode[pinGroup] = rising;
           if (state)
           {
             pinGroupStoredState[pinGroup] = pinGroupState[pinGroup];
             ttlArrayIndex[pinGroup] = 0; 
+            if (!rising) 
+            { // if we trigger on the falling edge, set initial state now, and advance counter here
+              setPinGroup(pinGroup, ttlArray[ttlArrayIndex[pinGroup]][pinGroup]); // Check blanking?
+              ttlArrayIndex[pinGroup]++;
+            }
           } else
           {
             pinGroupState[pinGroup] = pinGroupStoredState[pinGroup];
           }
           char out[20];
-          sprintf(out, "!PDS%d%c%d%c%d", pinGroup, sep, state, sep, transition);
+          sprintf(out, "!PDS%d%c%d%c%d", pinGroup, sep, state, sep, rising);
           Serial.println(out);
         }
       } else 
@@ -1005,6 +1024,34 @@ void loop()
       {
         Serial.println(sarErrorString);
       }  
+    }
+
+    // Set Signal LED flag
+    else if (command == "SSL") 
+    {
+      error = false;
+      byte result = inputString.substring(3).toInt();;
+      if (result == 0)
+      {
+        useSignalLEDs_ = false;
+        digitalWrite(dacLed, 0);
+        digitalWrite(ttlLed, 0);
+        digitalWriteDirect(trigLed,0);
+      }
+      else if (result == 1)
+      {
+        useSignalLEDs_ = true;
+        // TODO: make sure the LEDs are set correctly?
+      }
+      else error = true;
+      if (!error) 
+      {
+        Serial.print("!SSL");
+        Serial.println(result);
+      } else
+      {
+        Serial.println(sslErrorString);
+      }
     }
       
     //status commands
@@ -1167,7 +1214,10 @@ void setDac(byte dNum,int dVal)
       return;
     }
   }
-  mcp.digitalWrite(dacLed, 0);
+  if (useSignalLEDs_)
+  {
+    mcp.digitalWrite(dacLed, 0);
+  }
 }
 
 // sets the output state of the given pin number
@@ -1187,7 +1237,10 @@ void setTTL(byte t1, boolean t2)
   {
     bitClear(ttlState, pin);
   }  
-  mcp.digitalWrite(ttlLed, ttlState > 0);
+  if (useSignalLEDs_)
+  {
+    mcp.digitalWrite(ttlLed, ttlState > 0);
+  }
 }
 
 void setDacCheckBlanking(byte dacNr)
@@ -1243,7 +1296,10 @@ inline void setPinGroup(byte pinGroup, byte value)
   {
     ttlState = (ttlState & 0x00ff) | (value << 8);
   }  
-  mcp.digitalWrite(ttlLed, ttlState > 0);
+  if (useSignalLEDs_)
+  {
+    mcp.digitalWrite(ttlLed, ttlState > 0);
+  }
 }
 
 /*
