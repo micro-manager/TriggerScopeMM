@@ -1214,17 +1214,14 @@ void setDac(byte dNum,int dVal)
 {  
   dac_write(10,0, dNum, dVal); // Send dac_code
   //led indication
-  for (byte d=0; d < 16; d++) 
-  {
-    if (dacState[dNum] > 0) 
-    {
-      digitalWrite(dacLed, 1);
-      return;
-    }
-  }
   if (useSignalLEDs_)
   {
-    digitalWrite(dacLed, 0);
+    int dacSum = 0;
+    for (byte d=0; d < 16; d++)
+    {
+      dacSum += dacState[d];
+    }
+    digitalWrite(dacLed, dacSum > 0);
   }
 }
 
