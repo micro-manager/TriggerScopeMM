@@ -1,5 +1,5 @@
 # Overview
-This firmware allows voltage overdrive and underdrive pulses to be applied at the beginning of the analog output signal as illustrated in this ![diagram](diagram.png).
+This firmware allows voltage overdrive and underdrive pulses to be applied at the beginning of the analog output signal as illustrated below: <img src="https://raw.githubusercontent.com/mehta-lab/TriggerScopeMM/overdrive_firmware/src/Overdrive/diagram.png" width=50%>.
 
 Overdrive pulses can be incorporated into DAC sequences. The voltage and duration of each overdrive pulse can be independently programmed.
 
