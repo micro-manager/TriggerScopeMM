@@ -12,6 +12,8 @@ Extensions of the original firmware to enable overdrive pulses include:
 
 See command info using "?\n" command for details on use. 
 
+This functionality will be available in the TriggerScopeMM Micro-manager device adapter in an upcoming update.
+
 Ensure the correct firmware version is used for a given board serial number, as described earlier.
 
 For more information on serial # or if you have errors please contact ARC at advancedreseach-consulting.com
