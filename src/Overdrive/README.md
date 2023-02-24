@@ -10,7 +10,7 @@ Extensions of the original firmware to enable overdrive pulses include:
 	This command sets the duration of the overdrive pulse. After this time expires, the voltage on the specified pin will set to the state specified in the PAS list. 
  - BAD (sets delay in blanking mode of analog output) and BAL (sets length of analog output pulse in blanking mode) commands are deprecated.
 
- - See command info using "?\n" command for details on use. 
+See command info using "?\n" command for details on use. 
 
 Ensure the correct firmware version is used for a given board serial number, as described earlier.
 
