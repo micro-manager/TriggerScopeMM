@@ -1546,7 +1546,7 @@ void diagTest()
  */
 void generateDacBlankEvents()
 {
-  
+  /*
 int    dacArray[NR_DAC_STATES][NR_DACS] = {{0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}}; // DACprogram list
 uint8_t ttlArray[NR_DO_STATES][2] = {{0,0}}; // digital output states program list
 int ttlArrayMaxIndex[2] = {0, 0}; // maintains the max index in the array that was set
@@ -1568,7 +1568,7 @@ uint32_t dacBlankEventNextWait[2 * NR_DACS] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 uint8_t dacBlankEventPinNr[2 * NR_DACS] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 // 0 : off, 1: set normal state, 2: set value from dacArray
 uint8_t dacBlankEventState[2 * NR_DACS] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-  
+  */
 
   // note: this should probably be duplicated for both trigger directions, ignore now for simplicity
   
