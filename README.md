@@ -1,9 +1,9 @@
 # Triggerscope
 Micro-Manager-specific firmware for the Triggerscope.
 
-The Triggerscope (http://arc.austinblanco.com/product/triggerscope-3/) 
+The Triggerscope (https://advancedresearch-consulting.com/product/triggerscope-4/) 
 is an Arduino-based device build and sold by "Advanced Research Consulting" 
-(https://arc.austinblanco.com/) that provides analog and digital outputs.  
+(https://advancedresearch-consulting.com/) that provides analog and digital outputs.  
 
 This firmware - in combination with the Micro-Manager "TriggerscopeMM" device adapter, 
 allows for control of 16 analog and 16 digital outputs.  Outputs can 
