@@ -16,4 +16,4 @@ TriggerScope version 3 boards (serial numbers 1932-1970) must use the TriggerSco
 
 TriggerScope version 4 boards (serial numbers 1971-2117) must use the TriggerScope_V4 firmware.
 
-TriggerScope version 4B boards (serial numbers 2118 and later) must use the TriggerScope_V4 firmware.
+TriggerScope version 4B boards (serial numbers 2118 and later) must use the TriggerScope_V4B firmware.
